@@ -1,4 +1,37 @@
 {
-  "telegramChatId": null,
-  "events": {}
+  "telegramChatId": "7574718788",
+  "events": {
+    "2027-03-04": {
+      "hasMatch": false,
+      "fingerprint": "",
+      "blocked": false,
+      "lastChecked": "2026-09-13T02:58:48.329Z",
+      "lastDetail": "Page text not ready",
+      "matches": []
+    },
+    "2027-03-05": {
+      "hasMatch": false,
+      "fingerprint": "",
+      "blocked": false,
+      "lastChecked": "2026-09-13T02:59:03.648Z",
+      "lastDetail": "Page text not ready",
+      "matches": []
+    },
+    "2027-03-08": {
+      "hasMatch": false,
+      "fingerprint": "",
+      "blocked": false,
+      "lastChecked": "2026-09-13T02:59:18.997Z",
+      "lastDetail": "Page text not ready",
+      "matches": []
+    },
+    "2027-03-09": {
+      "hasMatch": false,
+      "fingerprint": "",
+      "blocked": false,
+      "lastChecked": "2026-09-13T02:59:34.324Z",
+      "lastDetail": "Page text not ready",
+      "matches": []
+    }
+  }
 }
