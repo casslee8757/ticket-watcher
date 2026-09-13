@@ -1,0 +1,10 @@
+{
+  "name": "bruno-mars-sydney-telegram-watcher",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Checks Bruno Mars Sydney Ticketmaster pages and sends Telegram alerts for qualifying pairs.",
+  "dependencies": {
+    "puppeteer-core": "^24.16.0"
+  }
+}
