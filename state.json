@@ -5,32 +5,32 @@
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-17T01:30:53.335Z",
-      "lastDetail": "Page text not ready",
+      "lastChecked": "2026-09-17T01:45:43.035Z",
+      "lastDetail": "No qualifying pair detected. Quantity=2 could not be confirmed.",
       "matches": []
     },
     "2027-03-05": {
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-17T01:31:08.664Z",
-      "lastDetail": "Page text not ready",
+      "lastChecked": "2026-09-17T01:46:00.035Z",
+      "lastDetail": "No qualifying pair detected. Quantity=2 could not be confirmed.",
       "matches": []
     },
     "2027-03-08": {
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-17T01:31:23.961Z",
-      "lastDetail": "Page text not ready",
+      "lastChecked": "2026-09-17T01:46:17.096Z",
+      "lastDetail": "No qualifying pair detected. Quantity=2 could not be confirmed.",
       "matches": []
     },
     "2027-03-09": {
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-17T01:31:39.258Z",
-      "lastDetail": "Page text not ready",
+      "lastChecked": "2026-09-17T01:46:34.176Z",
+      "lastDetail": "No qualifying pair detected. Quantity=2 could not be confirmed.",
       "matches": []
     }
   }
