@@ -13,8 +13,11 @@ const STATE_PATH = path.resolve('state.json');
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const EXPLICIT_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 const TEST_NOTIFICATION = String(process.env.TEST_NOTIFICATION || 'false').toLowerCase() === 'true';
-const PAGE_TIMEOUT_MS = 65000;
-const PAGE_SETTLE_MS = 9000;
+const PAGE_TIMEOUT_MS = 90000;
+const PAGE_SETTLE_MS = 7000;
+const READY_WAIT_MS = 45000;
+const RESULT_WAIT_MS = 30000;
+const SCAN_ATTEMPTS = 3;
 const BETWEEN_EVENTS_MS = 3500;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -73,6 +76,54 @@ function summarizeMatch(match) {
   if (match.ticketType) bits.push(match.ticketType);
   if (match.availableCount != null) bits.push(`${match.availableCount} available`);
   return bits.join(' · ');
+}
+
+async function waitForTicketPageReady(page, timeoutMs = READY_WAIT_MS) {
+  const started = Date.now();
+  let last = null;
+  while (Date.now() - started < timeoutMs) {
+    last = await page.evaluate(() => {
+      const text = String(document.body?.innerText || '').replace(/\s+/g, ' ').trim();
+      const challenge = /(pardon\s+the\s+interruption|are\s+you\s+a\s+real\s+fan|verify\s+you\s+are\s+human|access\s+denied|unusual\s+activity|captcha|robot\s+check)/i.test(text);
+      const selectors = {
+        quantityStepper: Boolean(document.querySelector('div[data-testid="quantityStepper"]')),
+        findTicketsBtn: Boolean(document.querySelector('button[data-testid="findTicketsBtn"]')),
+        reserveView: Boolean(document.querySelector('div[data-testid="reserveView"]')),
+      };
+      return {
+        readyState: document.readyState,
+        bodyLength: text.length,
+        challenge,
+        selectors,
+        title: document.title || '',
+        url: location.href,
+      };
+    }).catch(() => null);
+    if (last?.challenge || last?.selectors?.quantityStepper || last?.selectors?.findTicketsBtn || last?.selectors?.reserveView || (last?.bodyLength || 0) >= 120) {
+      return { ready: true, ...last, waitedMs: Date.now() - started };
+    }
+    await sleep(1000);
+  }
+  return { ready: false, ...(last || {}), waitedMs: Date.now() - started };
+}
+
+async function pageDiagnostics(page) {
+  return page.evaluate(() => {
+    const text = String(document.body?.innerText || '').replace(/\s+/g, ' ').trim();
+    const html = document.documentElement?.outerHTML || '';
+    return {
+      title: document.title || '',
+      url: location.href,
+      readyState: document.readyState,
+      bodyLength: text.length,
+      htmlLength: html.length,
+      quantityStepper: Boolean(document.querySelector('div[data-testid="quantityStepper"]')),
+      findTicketsBtn: Boolean(document.querySelector('button[data-testid="findTicketsBtn"]')),
+      reserveView: Boolean(document.querySelector('div[data-testid="reserveView"]')),
+      challengeText: /(pardon\s+the\s+interruption|are\s+you\s+a\s+real\s+fan|verify\s+you\s+are\s+human|access\s+denied|unusual\s+activity|captcha|robot\s+check)/i.test(text),
+      textSample: text.slice(0, 500),
+    };
+  }).catch(error => ({ error: String(error?.message || error) }));
 }
 
 async function scanPage(page) {
@@ -170,7 +221,7 @@ async function scanPage(page) {
       if (!b) return { clicked: false, uiSeen: false };
       b.click(); await sleep(1000);
       const started = Date.now();
-      while (Date.now() - started < 12000) {
+      while (Date.now() - started < 30000) {
         if (document.querySelector('div[data-testid="reserveView"]')) break;
         const t = clean(document.body?.innerText || '');
         if (NO_TICKETS_RE.test(t) || BOT_RE.test(t)) break;
@@ -193,9 +244,18 @@ async function scanPage(page) {
       return matches.filter(m => { const k = `${m.section}|${m.row || ''}|${m.price || ''}|${m.ticketType || ''}|${m.availableCount ?? ''}`; if (seen.has(k)) return false; seen.add(k); return true; });
     }
 
-    const firstBody = clean(document.body?.innerText || '');
-    if (!firstBody) return { ok: true, verified: false, challenge: false, matches: [], detail: 'Ticket page text not ready.' };
+    let firstBody = clean(document.body?.innerText || '');
+    const readyStarted = Date.now();
+    while (Date.now() - readyStarted < 20000) {
+      const hasUi = document.querySelector('div[data-testid="quantityStepper"],button[data-testid="findTicketsBtn"],div[data-testid="reserveView"]');
+      if (BOT_RE.test(firstBody) || hasUi || firstBody.length >= 120) break;
+      await sleep(500);
+      firstBody = clean(document.body?.innerText || '');
+    }
     if (BOT_RE.test(firstBody)) return { ok: true, verified: false, challenge: true, matches: [], detail: 'Ticketmaster verification/challenge detected; not bypassed.' };
+    if (!firstBody && !document.querySelector('div[data-testid="quantityStepper"],button[data-testid="findTicketsBtn"],div[data-testid="reserveView"]')) {
+      return { ok: true, verified: false, challenge: false, matches: [], detail: 'UNVERIFIED: Ticket page did not render usable text or ticket-search UI.' };
+    }
     const consent = [...document.querySelectorAll('button')].filter(visible).find(b => /^(accept all|accept all cookies|allow all)$/i.test(clean(b.innerText || b.textContent)));
     if (consent) { consent.click(); await sleep(500); }
 
@@ -223,9 +283,12 @@ async function scanPage(page) {
     }
     const finalMatches = dedupe(matches).slice(0,20);
     if (finalMatches.length) return { ok:true, verified:true, challenge:false, matches:finalMatches, quantityConfirmed:true, quantityMethod:qty.method, detail:`${finalMatches.length} qualifying option(s) found. Resale listings seen: ${resaleListingsSeen}.` };
-    const resultUiPresent = Boolean(reserveView) || find.clicked || nodes.length > 0 || NO_TICKETS_RE.test(body);
+    if (resaleListingsSeen > 0 && parsedListings === 0) {
+      return { ok:true, verified:false, challenge:false, matches:[], quantityConfirmed:true, quantityMethod:qty.method, detail:`UNVERIFIED: ${resaleListingsSeen} resale listing(s) were visible but their section could not be parsed.` };
+    }
+    const resultUiPresent = Boolean(reserveView) || nodes.length > 0 || NO_TICKETS_RE.test(body);
     if (resultUiPresent) return { ok:true, verified:true, challenge:false, matches:[], quantityConfirmed:true, quantityMethod:qty.method, detail:`No qualifying pair. Result nodes=${nodes.length}, parsed listings=${parsedListings}, resale listings=${resaleListingsSeen}.` };
-    return { ok:true, verified:false, challenge:false, matches:[], detail:'UNVERIFIED: search ran but no recognizable result UI appeared.' };
+    return { ok:true, verified:false, challenge:false, matches:[], detail:`UNVERIFIED: Find Tickets ${find.clicked ? 'was clicked' : 'was not found'}, but no recognizable result UI appeared.` };
   });
 }
 
@@ -234,11 +297,54 @@ async function scanEvent(browser, event, previous, chatId) {
   try {
     await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
     await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-AU,en;q=0.9' });
-    await page.goto(event.url, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT_MS });
-    await sleep(PAGE_SETTLE_MS);
-    const result = await scanPage(page);
-    const now = new Date().toISOString();
+    page.setDefaultNavigationTimeout(PAGE_TIMEOUT_MS);
+    page.setDefaultTimeout(30000);
 
+    let result = null;
+    let lastDiag = null;
+    for (let attempt = 1; attempt <= SCAN_ATTEMPTS; attempt++) {
+      try {
+        console.log(`${event.label}: attempt ${attempt}/${SCAN_ATTEMPTS} loading ${event.url}`);
+        if (attempt === 1) {
+          await page.goto(event.url, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT_MS });
+        } else {
+          await page.reload({ waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT_MS });
+        }
+
+        const ready = await waitForTicketPageReady(page, READY_WAIT_MS);
+        console.log(`${event.label}: ready=${ready.ready} waited=${ready.waitedMs}ms body=${ready.bodyLength ?? 'n/a'} qty=${Boolean(ready.selectors?.quantityStepper)} find=${Boolean(ready.selectors?.findTicketsBtn)} reserve=${Boolean(ready.selectors?.reserveView)} challenge=${Boolean(ready.challenge)}`);
+        if (!ready.ready) {
+          lastDiag = await pageDiagnostics(page);
+          console.log(`${event.label}: page not ready diagnostics=${JSON.stringify(lastDiag)}`);
+          if (attempt < SCAN_ATTEMPTS) { await sleep(2500); continue; }
+          result = { ok:true, verified:false, challenge:Boolean(lastDiag?.challengeText), matches:[], detail:`UNVERIFIED: page never became ready after ${SCAN_ATTEMPTS} attempts (body=${lastDiag?.bodyLength ?? 'n/a'}, html=${lastDiag?.htmlLength ?? 'n/a'}).` };
+          break;
+        }
+
+        await sleep(PAGE_SETTLE_MS);
+        result = await scanPage(page);
+        lastDiag = await pageDiagnostics(page);
+        console.log(`${event.label}: scan result verified=${result?.verified} challenge=${result?.challenge} detail=${result?.detail}`);
+        console.log(`${event.label}: diagnostics=${JSON.stringify(lastDiag)}`);
+
+        if (result?.challenge || result?.verified === true) break;
+        if (attempt < SCAN_ATTEMPTS) {
+          console.log(`${event.label}: unverified, retrying after reload...`);
+          await sleep(2500);
+        }
+      } catch (attemptError) {
+        lastDiag = await pageDiagnostics(page).catch(() => null);
+        console.log(`${event.label}: attempt ${attempt} error=${String(attemptError?.message || attemptError)} diagnostics=${JSON.stringify(lastDiag)}`);
+        if (attempt === SCAN_ATTEMPTS) throw attemptError;
+        await sleep(2500);
+      }
+    }
+
+    if (!result) {
+      result = { ok:true, verified:false, challenge:false, matches:[], detail:'UNVERIFIED: scan produced no result.' };
+    }
+
+    const now = new Date().toISOString();
     if (result.challenge) {
       if (previous?.lastStatus !== 'blocked') {
         await sendTelegramMessage(chatId, `⚠️ Bruno watcher: Ticketmaster verification 화면이 감지됐어.\n${event.label}\n\n이번 확인은 신뢰할 수 없어서 좌석 없음으로 처리하지 않았어.`, event.url, `Ticketmaster ${event.label} 열기`);
@@ -247,10 +353,11 @@ async function scanEvent(browser, event, previous, chatId) {
     }
 
     if (result.verified === false) {
-      if (previous?.lastStatus !== 'unverified') {
-        await sendTelegramMessage(chatId, `⚠️ Bruno watcher가 ${event.label}의 Ticketmaster 좌석 결과를 제대로 읽지 못했어.\n\n${result.detail}\n\n중요: 이 상태를 '좌석 없음'으로 간주하지 않아.`, event.url, `Ticketmaster ${event.label} 확인`);
+      const diagSuffix = lastDiag ? `\n\n진단: body=${lastDiag.bodyLength ?? 'n/a'}, html=${lastDiag.htmlLength ?? 'n/a'}, qty=${Boolean(lastDiag.quantityStepper)}, find=${Boolean(lastDiag.findTicketsBtn)}, reserve=${Boolean(lastDiag.reserveView)}` : '';
+      if (previous?.lastStatus !== 'unverified' || previous?.lastDetail !== result.detail) {
+        await sendTelegramMessage(chatId, `⚠️ Bruno watcher가 ${event.label}의 Ticketmaster 좌석 결과를 제대로 읽지 못했어.\n\n${result.detail}${diagSuffix}\n\n중요: 이 상태를 '좌석 없음'으로 간주하지 않아.`, event.url, `Ticketmaster ${event.label} 확인`);
       }
-      return { ...previous, lastStatus:'unverified', blocked:false, hasMatch:false, fingerprint:'', lastChecked:now, lastDetail:result.detail };
+      return { ...previous, lastStatus:'unverified', blocked:false, hasMatch:false, fingerprint:'', lastChecked:now, lastDetail:result.detail, lastDiagnostics:lastDiag || null };
     }
 
     const matches = Array.isArray(result.matches) ? result.matches : [];
@@ -272,7 +379,7 @@ async function scanEvent(browser, event, previous, chatId) {
         '아래 버튼을 누르면 이 날짜 Ticketmaster 페이지만 열려.'
       ].join('\n'), event.url, `🎟 ${event.label} Ticketmaster 열기`);
     }
-    return { lastStatus:hasMatch?'match':'clear', hasMatch, fingerprint:hasMatch?fingerprint:'', blocked:false, lastChecked:now, lastDetail:result.detail, matches:matches.slice(0,6) };
+    return { lastStatus:hasMatch?'match':'clear', hasMatch, fingerprint:hasMatch?fingerprint:'', blocked:false, lastChecked:now, lastDetail:result.detail, lastDiagnostics:lastDiag || null, matches:matches.slice(0,6) };
   } catch (error) {
     const now = new Date().toISOString();
     const detail = `ERROR: ${String(error?.message || error)}`;
@@ -287,7 +394,7 @@ async function main() {
   const state = await loadState();
   const chatId = await resolveTelegramChatId(state);
   state.telegramChatId = String(chatId); await saveState(state);
-  if (TEST_NOTIFICATION) await sendTelegramMessage(chatId, '✅ Bruno Mars Telegram watcher v2 테스트 성공!\n\n이번 버전은 Ticketmaster 검색 결과를 확인하지 못하면 No match로 오판하지 않아.', EVENTS[0].url, '🎟 Ticketmaster 테스트 열기');
+  if (TEST_NOTIFICATION) await sendTelegramMessage(chatId, '✅ Bruno Mars Telegram watcher v3 테스트 성공!\n\n이번 버전은 Ticketmaster 검색 결과를 확인하지 못하면 No match로 오판하지 않아.', EVENTS[0].url, '🎟 Ticketmaster 테스트 열기');
 
   const chromePath = process.env.CHROME_PATH || '';
   if (!chromePath) throw new Error('CHROME_PATH is not set.');
