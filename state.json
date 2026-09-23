@@ -5,37 +5,85 @@
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-23T16:15:48.353Z",
-      "lastDetail": "Ticket page text not ready.",
+      "lastChecked": "2026-09-23T16:20:33.067Z",
+      "lastDetail": "UNVERIFIED: page never became ready after 3 attempts (body=0, html=198815).",
       "matches": [],
-      "lastStatus": "unverified"
+      "lastStatus": "unverified",
+      "lastDiagnostics": {
+        "title": "Your Browsing Activity Has Been Paused",
+        "url": "https://www.ticketmaster.com.au/bruno-mars-the-romantic-tour-sydney-olympic-park-04-03-2027/event/2500651482031C06",
+        "readyState": "complete",
+        "bodyLength": 0,
+        "htmlLength": 198815,
+        "quantityStepper": false,
+        "findTicketsBtn": false,
+        "reserveView": false,
+        "challengeText": false,
+        "textSample": ""
+      }
     },
     "2027-03-05": {
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-23T16:16:01.255Z",
-      "lastDetail": "Ticket page text not ready.",
+      "lastChecked": "2026-09-23T16:22:59.257Z",
+      "lastDetail": "UNVERIFIED: page never became ready after 3 attempts (body=0, html=198825).",
       "matches": [],
-      "lastStatus": "unverified"
+      "lastStatus": "unverified",
+      "lastDiagnostics": {
+        "title": "Your Browsing Activity Has Been Paused",
+        "url": "https://www.ticketmaster.com.au/bruno-mars-the-romantic-tour-sydney-olympic-park-05-03-2027/event/2500651A89041AC3",
+        "readyState": "complete",
+        "bodyLength": 0,
+        "htmlLength": 198825,
+        "quantityStepper": false,
+        "findTicketsBtn": false,
+        "reserveView": false,
+        "challengeText": false,
+        "textSample": ""
+      }
     },
     "2027-03-08": {
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-23T16:16:14.160Z",
-      "lastDetail": "Ticket page text not ready.",
+      "lastChecked": "2026-09-23T16:25:25.058Z",
+      "lastDetail": "UNVERIFIED: page never became ready after 3 attempts (body=0, html=198845).",
       "matches": [],
-      "lastStatus": "unverified"
+      "lastStatus": "unverified",
+      "lastDiagnostics": {
+        "title": "Your Browsing Activity Has Been Paused",
+        "url": "https://www.ticketmaster.com.au/bruno-mars-the-romantic-tour-sydney-olympic-park-08-03-2027/event/2500651A89881B04",
+        "readyState": "complete",
+        "bodyLength": 0,
+        "htmlLength": 198845,
+        "quantityStepper": false,
+        "findTicketsBtn": false,
+        "reserveView": false,
+        "challengeText": false,
+        "textSample": ""
+      }
     },
     "2027-03-09": {
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-23T16:16:27.073Z",
-      "lastDetail": "Ticket page text not ready.",
+      "lastChecked": "2026-09-23T16:27:51.024Z",
+      "lastDetail": "UNVERIFIED: page never became ready after 3 attempts (body=0, html=198826).",
       "matches": [],
-      "lastStatus": "unverified"
+      "lastStatus": "unverified",
+      "lastDiagnostics": {
+        "title": "Your Browsing Activity Has Been Paused",
+        "url": "https://www.ticketmaster.com.au/bruno-mars-the-romantic-tour-sydney-olympic-park-09-03-2027/event/2500651A89891B06",
+        "readyState": "complete",
+        "bodyLength": 0,
+        "htmlLength": 198826,
+        "quantityStepper": false,
+        "findTicketsBtn": false,
+        "reserveView": false,
+        "challengeText": false,
+        "textSample": ""
+      }
     }
   }
 }
