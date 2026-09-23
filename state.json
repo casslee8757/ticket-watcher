@@ -5,33 +5,37 @@
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-23T13:45:46.810Z",
-      "lastDetail": "Page text not ready",
-      "matches": []
+      "lastChecked": "2026-09-23T14:30:58.606Z",
+      "lastDetail": "Ticket page text not ready.",
+      "matches": [],
+      "lastStatus": "unverified"
     },
     "2027-03-05": {
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-23T13:46:02.196Z",
-      "lastDetail": "Page text not ready",
-      "matches": []
+      "lastChecked": "2026-09-23T14:31:13.241Z",
+      "lastDetail": "Ticket page text not ready.",
+      "matches": [],
+      "lastStatus": "unverified"
     },
     "2027-03-08": {
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-23T13:46:17.541Z",
-      "lastDetail": "Page text not ready",
-      "matches": []
+      "lastChecked": "2026-09-23T14:31:26.685Z",
+      "lastDetail": "Ticket page text not ready.",
+      "matches": [],
+      "lastStatus": "unverified"
     },
     "2027-03-09": {
       "hasMatch": false,
       "fingerprint": "",
       "blocked": false,
-      "lastChecked": "2026-09-23T13:46:32.927Z",
-      "lastDetail": "Page text not ready",
-      "matches": []
+      "lastChecked": "2026-09-23T14:31:40.159Z",
+      "lastDetail": "Ticket page text not ready.",
+      "matches": [],
+      "lastStatus": "unverified"
     }
   }
 }
